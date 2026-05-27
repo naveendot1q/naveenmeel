@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm --filter @workspace/naveen-blog run build && cp -r artifacts/naveen-blog/dist ./dist",
+  "buildCommand": "pnpm --filter @workspace/naveen-blog run build && rm -rf dist && cp -r artifacts/naveen-blog/dist dist",
   "outputDirectory": "dist",
   "framework": null,
   "rewrites": [
