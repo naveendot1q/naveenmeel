@@ -45,7 +45,9 @@ export default defineConfig({
   },
   root: path.resolve(import.meta.dirname),
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist"),
+    // Output to repo root's dist/ so Vercel finds it at the standard location.
+    // On Replit the dev server is used directly so this only matters for builds.
+    outDir: path.resolve(import.meta.dirname, "../../dist"),
     emptyOutDir: true,
   },
   server: {
