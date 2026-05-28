@@ -117,8 +117,9 @@ export default function HeatmapChart({ posts }: Props) {
         </div>
       </div>
 
-      {/* Grid — fills full width via space-between */}
-      <div ref={containerRef} style={{ position: 'relative' }}>
+      {/* Grid — scrolls horizontally on small screens */}
+      <div style={{ overflowX: 'auto', overflowY: 'visible', WebkitOverflowScrolling: 'touch' }}>
+      <div ref={containerRef} style={{ position: 'relative', minWidth: 680 }}>
         {/* Month labels row */}
         <div style={{ display: 'flex', marginBottom: 4 }}>
           <div style={{ width: DAY_LABEL_W, flexShrink: 0 }} />
@@ -181,6 +182,7 @@ export default function HeatmapChart({ posts }: Props) {
             {tooltip.text}
           </div>
         )}
+      </div>
       </div>
     </div>
   );
