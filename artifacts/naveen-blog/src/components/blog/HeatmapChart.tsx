@@ -98,7 +98,7 @@ export default function HeatmapChart({ posts }: Props) {
   const DAY_LABEL_W = 28;
 
   return (
-    <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 12, padding: '16px 20px', position: 'relative' }}>
+    <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 12, padding: '16px 20px', position: 'relative', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
         <div>
@@ -118,8 +118,8 @@ export default function HeatmapChart({ posts }: Props) {
       </div>
 
       {/* Grid — scrolls horizontally on small screens */}
-      <div style={{ overflowX: 'auto', overflowY: 'visible', WebkitOverflowScrolling: 'touch' }}>
-      <div ref={containerRef} style={{ position: 'relative', minWidth: 680 }}>
+      <div style={{ overflowX: 'auto', width: '100%' }}>
+      <div ref={containerRef} style={{ position: 'relative', minWidth: 640 }}>
         {/* Month labels row */}
         <div style={{ display: 'flex', marginBottom: 4 }}>
           <div style={{ width: DAY_LABEL_W, flexShrink: 0 }} />
