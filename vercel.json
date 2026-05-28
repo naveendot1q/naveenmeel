@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm --filter @workspace/naveen-blog run build && rm -rf dist && cp -r artifacts/naveen-blog/dist dist",
+  "buildCommand": "node scripts/vercel-build.mjs",
   "outputDirectory": "dist",
   "framework": null,
   "rewrites": [
