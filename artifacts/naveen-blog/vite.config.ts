@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 
 // PORT — required for Replit dev server, optional elsewhere (Vercel build ignores it)
@@ -21,6 +22,85 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    VitePWA({
+      registerType: "autoUpdate",
+      includeAssets: ["naveen.jpg", "favicon.svg", "robots.txt"],
+      manifest: {
+        name: "Naveen Meel — Portfolio & Blog",
+        short_name: "Naveen.dev",
+        description:
+          "NOC Network Engineer at Airtel. Writing about Networking, Cloud, DevOps, Kubernetes, and Terraform.",
+        theme_color: "#0d1117",
+        background_color: "#0d1117",
+        display: "standalone",
+        start_url: "/",
+        scope: "/",
+        orientation: "portrait-primary",
+        icons: [
+          {
+            src: "naveen.jpg",
+            sizes: "192x192",
+            type: "image/jpeg",
+          },
+          {
+            src: "naveen.jpg",
+            sizes: "512x512",
+            type: "image/jpeg",
+          },
+          {
+            src: "naveen.jpg",
+            sizes: "512x512",
+            type: "image/jpeg",
+            purpose: "maskable",
+          },
+        ],
+      },
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,svg,ico,woff,woff2}"],
+        runtimeCaching: [
+          // Google Fonts — cache first, 1 year
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "google-fonts-stylesheets",
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "google-fonts-webfonts",
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          // API calls — network first (fresh data when online, cached when offline)
+          {
+            urlPattern: /\/api\/.*/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "api-responses",
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 },
+              networkTimeoutSeconds: 8,
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          // Images in public folder — cache first
+          {
+            urlPattern: /\.(?:jpg|jpeg|png|gif|webp|avif)$/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "images",
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
+    }),
     // Replit-only dev plugins
     ...(isReplit && isDev
       ? [

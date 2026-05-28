@@ -4,6 +4,7 @@ import HomePage from "@/pages/HomePage";
 import BlogPage from "@/pages/BlogPage";
 import BlogPostPage from "@/pages/BlogPostPage";
 import LoginPage from "@/pages/LoginPage";
+import PwaUpdater from "@/components/PwaUpdater";
 
 function NotFound() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
         <Router />
       </WouterRouter>
+      <PwaUpdater />
     </ThemeProvider>
   );
 }
