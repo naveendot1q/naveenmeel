@@ -104,7 +104,7 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
 };
 
 await esbuild({
-  entryPoints: { index: path.resolve(artifactDir, "src/app.ts") },
+  entryPoints: { index: path.resolve(artifactDir, "src/vercel.ts") },
   platform: "node",
   bundle: true,
   format: "esm",
