@@ -20,10 +20,10 @@ execSync("pnpm --filter @workspace/api-server run build:vercel", {
 });
 console.log("[vercel-build] api/ contents:", readdirSync(join(root, "api")).join(", "));
 
-// Step 2: write .vc-config.json — tells Vercel this is a Node.js serverless function
-// that uses ESM and has a default export handler.
+// Step 2: write .vc-config.json — tells Vercel this is a Node.js serverless function.
+// launcherType "Nodejs" + handler pointing to the .mjs file is the correct format.
+// Do NOT set "runtime" here — Vercel infers it from the project's Node version setting.
 const vcConfig = {
-  runtime: "nodejs20.x",
   handler: "index.mjs",
   launcherType: "Nodejs",
   shouldAddHelpers: true,
