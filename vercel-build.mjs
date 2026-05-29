@@ -12,14 +12,15 @@ function run(cmd, cwd) {
 
 console.log("[build] root:", root);
 
-// 1. Install deps
-console.log("[build] installing api deps...");
-run("npm install --prefer-offline", join(root, "api"));
-
+// 1. Install frontend deps
 console.log("[build] installing frontend deps...");
-run("npm install --prefer-offline", join(root, "frontend"));
+run("npm install", join(root, "frontend"));
 
-// 2. Bundle API with esbuild (from root node_modules)
+// 2. Install api deps
+console.log("[build] installing api deps...");
+run("npm install", join(root, "api"));
+
+// 3. Bundle API with esbuild (from root node_modules)
 console.log("[build] bundling API...");
 const apiBundleDir = join(root, "dist", "api");
 mkdirSync(apiBundleDir, { recursive: true });
@@ -38,11 +39,12 @@ await build({
 });
 console.log("[build] API bundled ✓");
 
-// 3. Build frontend using npx so it resolves vite regardless of bin location
+// 4. Build frontend — use absolute path to vite binary
+const viteBin = join(root, "frontend", "node_modules", ".bin", "vite");
 console.log("[build] building frontend...");
-run("npx --no-install vite build", join(root, "frontend"));
+run(`"${viteBin}" build`, join(root, "frontend"));
 
-// 4. Copy frontend/dist → root dist/
+// 5. Copy frontend/dist → root dist/
 console.log("[build] copying frontend → dist/...");
 const frontendDist = join(root, "frontend", "dist");
 if (existsSync(frontendDist)) {
