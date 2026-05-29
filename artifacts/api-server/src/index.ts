@@ -1,25 +1,12 @@
-import app from "./app";
-import { logger } from "./lib/logger";
+import { Router, type IRouter } from "express";
+import healthRouter from "./health";
+import postsRouter from "./posts";
+import authRouter from "./auth";
 
-const rawPort = process.env["PORT"];
+const router: IRouter = Router();
 
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
+router.use(healthRouter);
+router.use(postsRouter);
+router.use(authRouter);
 
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
-
-  logger.info({ port }, "Server listening");
-});
+export default router;
