@@ -25,7 +25,7 @@
 #     - typescript
 #
 # ============================================================================
-minimumReleaseAge: 0
+minimumReleaseAge: 1440
 
 minimumReleaseAgeExclude:
   # Exclude @replit scoped packages from the minimum release age check.
@@ -75,8 +75,7 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
-  # Keep only non-linux-x64 platforms excluded.
-  # Vercel runs on linux-x64 so we must NOT exclude linux-x64 here.
+  # replit uses linux-x64 only, we can exclude all other platforms
   "esbuild>@esbuild/darwin-arm64": "-"
   "esbuild>@esbuild/darwin-x64": "-"
   "esbuild>@esbuild/freebsd-arm64": "-"

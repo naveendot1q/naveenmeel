@@ -1,6 +1,5 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
-import dns from "node:dns";
 import * as schema from "./schema";
 
 const { Pool } = pg;
@@ -11,20 +10,15 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Force Node.js to prefer IPv4 over IPv6 when resolving hostnames.
-// Vercel serverless runs on IPv4-only infrastructure; Supabase's pooler
-// defaults to IPv6 which causes ECONNREFUSED. This is the correct way to
-// enforce IPv4 without using the non-existent pg PoolConfig `family` option.
-dns.setDefaultResultOrder("ipv4first");
-
 const isProduction = process.env.NODE_ENV === "production";
 
 /**
- * Connection pool tuned for Vercel serverless + Supabase session-mode pooler:
- * - Use Supabase SESSION mode pooler URL (port 5432) — IPv4 compatible, works on Vercel
- * - Transaction mode (port 6543) uses IPv6 by default and fails on Vercel's IPv4-only network
- * - SSL required for Supabase in production
- * - max:3 to stay within Supabase free-tier connection limits
+ * Connection pool tuned for both Replit dev and Vercel serverless:
+ * - SSL required for Supabase (and most production Postgres providers)
+ * - max:3 in production to stay within Supabase free-tier limits (max 10 conns)
+ *   and avoid exhausting connections across warm serverless instances
+ * - Supabase transaction-mode pooler (port 6543) disables prepared statements;
+ *   add ?pgbouncer=true to DATABASE_URL when using that pooler
  */
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
