@@ -1,111 +1,74 @@
 /**
  * Vercel Build Output API v3 build script.
  *
- * Produces the following structure that Vercel understands natively:
- *
+ * Output structure:
  *   .vercel/output/
- *     config.json                          ← routing config
- *     static/                              ← served as-is (the React SPA)
+ *     config.json
+ *     static/          ← React SPA
  *     functions/
  *       api/index.func/
- *         index.mjs                        ← the Express handler bundle
- *         .vc-config.json                  ← marks this as a Node.js function
+ *         index.mjs    ← Express handler
+ *         .vc-config.json
  */
 import { execSync } from "node:child_process";
 import {
-  cpSync,
-  rmSync,
-  existsSync,
-  readdirSync,
-  mkdirSync,
-  writeFileSync,
+  cpSync, rmSync, existsSync, readdirSync, mkdirSync, writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
 console.log("[vercel-build] CWD:", root);
 
-// ── 1. Build the API bundle ────────────────────────────────────────────────
+// 1. Build API bundle → api/index.mjs
 console.log("[vercel-build] Building API bundle...");
-execSync("pnpm --filter @workspace/api-server run build:vercel", {
-  stdio: "inherit",
-  cwd: root,
-});
+execSync("pnpm --filter @workspace/api-server run build:vercel", { stdio: "inherit", cwd: root });
 console.log("[vercel-build] api/ contents:", readdirSync(join(root, "api")).join(", "));
 
-// ── 2. Build the React frontend ────────────────────────────────────────────
+// 2. Build React frontend
 console.log("[vercel-build] Building frontend...");
-execSync("pnpm --filter @workspace/naveen-blog run build", {
-  stdio: "inherit",
-  cwd: root,
-});
+execSync("pnpm --filter @workspace/naveen-blog run build", { stdio: "inherit", cwd: root });
 
-// ── 3. Assemble Vercel Build Output API v3 structure ──────────────────────
+// 3. Assemble .vercel/output
 const outRoot = join(root, ".vercel", "output");
 rmSync(outRoot, { recursive: true, force: true });
 
 // 3a. Static files
 const staticDir = join(outRoot, "static");
 mkdirSync(staticDir, { recursive: true });
-
-const frontendDist =
-  existsSync(join(root, "artifacts", "naveen-blog", "dist"))
-    ? join(root, "artifacts", "naveen-blog", "dist")
-    : join(root, "dist");
-
-if (!existsSync(frontendDist)) {
-  console.error("[vercel-build] Frontend dist not found:", frontendDist);
-  process.exit(1);
-}
+const frontendDist = existsSync(join(root, "artifacts", "naveen-blog", "dist"))
+  ? join(root, "artifacts", "naveen-blog", "dist")
+  : join(root, "dist");
+if (!existsSync(frontendDist)) { console.error("Frontend dist not found"); process.exit(1); }
 cpSync(frontendDist, staticDir, { recursive: true });
 console.log("[vercel-build] Copied frontend to .vercel/output/static/");
 
-// 3b. Function bundle
+// 3b. Function
 const funcDir = join(outRoot, "functions", "api", "index.func");
 mkdirSync(funcDir, { recursive: true });
-
-const apiDir = join(root, "api");
-for (const file of readdirSync(apiDir)) {
-  cpSync(join(apiDir, file), join(funcDir, file), { recursive: true });
+for (const file of readdirSync(join(root, "api"))) {
+  cpSync(join(root, "api", file), join(funcDir, file), { recursive: true });
 }
-console.log("[vercel-build] Copied API bundle to .vercel/output/functions/api/index.func/");
+writeFileSync(join(funcDir, ".vc-config.json"), JSON.stringify({
+  runtime: "nodejs20.x",
+  handler: "index.mjs",
+  launcherType: "Nodejs",
+  shouldAddHelpers: true,
+}, null, 2));
+console.log("[vercel-build] Wrote function to .vercel/output/functions/api/index.func/");
 
-// 3c. .vc-config.json
-writeFileSync(
-  join(funcDir, ".vc-config.json"),
-  JSON.stringify({
-    runtime: "nodejs20.x",
-    handler: "index.mjs",
-    launcherType: "Nodejs",
-    shouldAddHelpers: true,
-    supportsResponseStreaming: false,
-  }, null, 2),
-);
-console.log("[vercel-build] Wrote .vc-config.json");
-
-// 3d. Routing config — order matters, Vercel matches top to bottom.
-// Use the "handle" filesystem pass so static assets are served first,
-// then API routes hit the function, then everything else falls back to SPA.
-const config = {
+// 3c. Routing — API first (before filesystem), then static, then SPA fallback
+writeFileSync(join(outRoot, "config.json"), JSON.stringify({
   version: 3,
   routes: [
-    // Pass 1: serve existing static files (JS/CSS/images) directly
+    // 1. API routes → function (MUST be before filesystem check)
+    { src: "^/api(/.*)?$", dest: "/api/index" },
+    // 2. Check filesystem for static assets (JS, CSS, images)
     { handle: "filesystem" },
-    // Pass 2: anything under /api goes to the serverless function
-    {
-      src: "^/api(/.*)?$",
-      dest: "/api/index",
-    },
-    // Pass 3: everything else → SPA index.html for client-side routing
-    {
-      src: ".*",
-      dest: "/index.html",
-    },
+    // 3. SPA fallback for client-side routes
+    { src: ".*", dest: "/index.html" },
   ],
-};
-writeFileSync(join(outRoot, "config.json"), JSON.stringify(config, null, 2));
+}, null, 2));
 console.log("[vercel-build] Wrote .vercel/output/config.json");
-
-console.log("[vercel-build] Done. Output structure:");
-console.log("  .vercel/output/static/ →", readdirSync(staticDir).slice(0, 5).join(", "), "...");
-console.log("  .vercel/output/functions/api/index.func/ →", readdirSync(funcDir).join(", "));
+console.log("[vercel-build] Done.");
+console.log("  static/:", readdirSync(staticDir).slice(0, 5).join(", "), "...");
+console.log("  functions/api/index.func/:", readdirSync(funcDir).join(", "));
