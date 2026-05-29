@@ -3,43 +3,31 @@ import { cpSync, rmSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
-const run = (cmd, cwd) => execSync(cmd, { stdio: "inherit", cwd });
+console.log("[build] Root:", root);
 
-console.log("[build] root:", root);
+// Install dependencies
+console.log("[build] Installing API deps...");
+execSync("cd api && npm install", { stdio: "inherit", cwd: root });
 
-// ── 1. Install API deps ───────────────────────────────────
-console.log("[build] npm install (api)...");
-run("npm install", join(root, "api"));
+console.log("[build] Installing frontend deps...");
+execSync("cd frontend && npm install", { stdio: "inherit", cwd: root });
 
-// ── 2. Install frontend deps ──────────────────────────────
-console.log("[build] npm install (frontend)...");
-run("npm install", join(root, "frontend"));
+// Build API bundle
+console.log("[build] Building API...");
+execSync("cd api && npm run build", { stdio: "inherit", cwd: root });
 
-// ── 3. Bundle API with esbuild (now installed) ────────────
-console.log("[build] bundling API...");
-run(
-  `node_modules/.bin/esbuild src/vercel.ts \
-    --bundle \
-    --platform=node \
-    --target=node20 \
-    --format=esm \
-    --outfile=dist/index.mjs \
-    --external:pg-native \
-    --banner:js="import { createRequire } from 'module'; const require = createRequire(import.meta.url);"`,
-  join(root, "api")
-);
+// Build frontend
+console.log("[build] Building frontend...");
+execSync("cd frontend && npm run build", { stdio: "inherit", cwd: root });
 
-// ── 4. Build frontend ─────────────────────────────────────
-console.log("[build] building frontend...");
-run("node_modules/.bin/vite build", join(root, "frontend"));
-
-// ── 5. Copy frontend dist → root dist/ ───────────────────
+// Copy frontend dist to root dist/
 const src = join(root, "frontend", "dist");
 const dest = join(root, "dist");
-if (existsSync(src)) {
-  console.log("[build] copying frontend dist → root dist/...");
+
+if (src !== dest && existsSync(src)) {
+  console.log("[build] Copying frontend dist...");
   rmSync(dest, { recursive: true, force: true });
   cpSync(src, dest, { recursive: true });
 }
 
-console.log("[build] ✓ done");
+console.log("[build] Done!");
