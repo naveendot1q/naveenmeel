@@ -1,27 +1,24 @@
 import { execSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { join } from "node:path";
+import { build } from "esbuild";
 
 const root = process.cwd();
 const run = (cmd, cwd) => execSync(cmd, { stdio: "inherit", cwd });
 
 console.log("[build] root:", root);
 
-// 1. Install deps
+// 1. Install api + frontend deps
 console.log("[build] npm install (api)...");
 run("npm install", join(root, "api"));
 
 console.log("[build] npm install (frontend)...");
 run("npm install", join(root, "frontend"));
 
-// 2. Bundle API — import esbuild from where it was just installed
+// 2. Bundle API with esbuild (available from root node_modules)
 console.log("[build] bundling API...");
 const apiBundleDir = join(root, "dist", "api");
 mkdirSync(apiBundleDir, { recursive: true });
-
-const esbuildPath = resolve(root, "api", "node_modules", "esbuild", "lib", "main.js");
-const { build } = await import(pathToFileURL(esbuildPath).href);
 
 await build({
   entryPoints: [join(root, "api", "src", "vercel.ts")],
