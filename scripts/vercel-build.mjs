@@ -19,7 +19,6 @@ import {
   readdirSync,
   mkdirSync,
   writeFileSync,
-  renameSync,
 } from "node:fs";
 import { join } from "node:path";
 
@@ -32,7 +31,6 @@ execSync("pnpm --filter @workspace/api-server run build:vercel", {
   stdio: "inherit",
   cwd: root,
 });
-// build.vercel.mjs outputs to <root>/api/index.mjs
 console.log("[vercel-build] api/ contents:", readdirSync(join(root, "api")).join(", "));
 
 // ── 2. Build the React frontend ────────────────────────────────────────────
@@ -66,14 +64,13 @@ console.log("[vercel-build] Copied frontend to .vercel/output/static/");
 const funcDir = join(outRoot, "functions", "api", "index.func");
 mkdirSync(funcDir, { recursive: true });
 
-// Move all files from api/ into the func directory
 const apiDir = join(root, "api");
 for (const file of readdirSync(apiDir)) {
   cpSync(join(apiDir, file), join(funcDir, file), { recursive: true });
 }
 console.log("[vercel-build] Copied API bundle to .vercel/output/functions/api/index.func/");
 
-// 3c. .vc-config.json — tells Vercel this is a Node.js ESM serverless function
+// 3c. .vc-config.json
 writeFileSync(
   join(funcDir, ".vc-config.json"),
   JSON.stringify({
@@ -86,18 +83,22 @@ writeFileSync(
 );
 console.log("[vercel-build] Wrote .vc-config.json");
 
-// 3d. Routing config
+// 3d. Routing config — order matters, Vercel matches top to bottom.
+// Use the "handle" filesystem pass so static assets are served first,
+// then API routes hit the function, then everything else falls back to SPA.
 const config = {
   version: 3,
   routes: [
-    // API routes → the function
+    // Pass 1: serve existing static files (JS/CSS/images) directly
+    { handle: "filesystem" },
+    // Pass 2: anything under /api goes to the serverless function
     {
       src: "^/api(/.*)?$",
       dest: "/api/index",
     },
-    // Everything else → SPA index.html (client-side routing)
+    // Pass 3: everything else → SPA index.html for client-side routing
     {
-      src: "^/(?!api).*$",
+      src: ".*",
       dest: "/index.html",
     },
   ],
