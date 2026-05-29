@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
-import { createRequire } from "node:module";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const root = process.cwd();
 const run = (cmd, cwd) => execSync(cmd, { stdio: "inherit", cwd });
@@ -15,16 +15,15 @@ run("npm install", join(root, "api"));
 console.log("[build] npm install (frontend)...");
 run("npm install", join(root, "frontend"));
 
-// 2. Bundle API using esbuild JS API (avoids all shell-quoting issues)
+// 2. Bundle API — import esbuild from where it was just installed
 console.log("[build] bundling API...");
 const apiBundleDir = join(root, "dist", "api");
 mkdirSync(apiBundleDir, { recursive: true });
 
-// Load esbuild from the api's own node_modules (just installed)
-const require = createRequire(import.meta.url);
-const esbuild = require(join(root, "api", "node_modules", "esbuild"));
+const esbuildPath = resolve(root, "api", "node_modules", "esbuild", "lib", "main.js");
+const { build } = await import(pathToFileURL(esbuildPath).href);
 
-await esbuild.build({
+await build({
   entryPoints: [join(root, "api", "src", "vercel.ts")],
   bundle: true,
   platform: "node",
@@ -33,17 +32,16 @@ await esbuild.build({
   outfile: join(apiBundleDir, "index.mjs"),
   external: ["pg-native"],
   banner: {
-    js: `import { createRequire as _cr } from 'module'; const require = _cr(import.meta.url);`,
+    js: "import { createRequire as _cr } from 'module'; const require = _cr(import.meta.url);",
   },
 });
-
 console.log("[build] API bundled ✓");
 
 // 3. Build frontend
 console.log("[build] building frontend...");
 run("node_modules/.bin/vite build", join(root, "frontend"));
 
-// 4. Copy frontend dist → root dist/ (dist/api stays untouched)
+// 4. Copy frontend dist → root dist/
 console.log("[build] copying frontend → dist/...");
 const frontendDist = join(root, "frontend", "dist");
 if (existsSync(frontendDist)) {
