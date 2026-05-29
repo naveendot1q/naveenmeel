@@ -1,26 +1,32 @@
 import { execSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { build } from "esbuild";
 
 const root = process.cwd();
-
-function run(cmd, cwd) {
-  console.log(`  $ ${cmd}  [cwd: ${cwd}]`);
+const run = (cmd, cwd) => {
+  console.log(`  $ ${cmd}  [cwd: ${cwd ?? root}]`);
   execSync(cmd, { stdio: "inherit", cwd });
-}
+};
 
 console.log("[build] root:", root);
 
-// 1. Install frontend deps
-console.log("[build] installing frontend deps...");
-run("npm install", join(root, "frontend"));
+// 1. Single npm install at root installs all workspaces (frontend + api)
+console.log("[build] npm install (all workspaces)...");
+run("npm install", root);
 
-// 2. Install api deps
-console.log("[build] installing api deps...");
-run("npm install", join(root, "api"));
+// Debug: confirm vite exists
+const viteBin = join(root, "node_modules", ".bin", "vite");
+const frontendVite = join(root, "frontend", "node_modules", ".bin", "vite");
+console.log("[build] checking bins...");
+console.log("  root vite:", existsSync(viteBin) ? "✓" : "✗");
+console.log("  frontend vite:", existsSync(frontendVite) ? "✓" : "✗");
+try {
+  const bins = readdirSync(join(root, "node_modules", ".bin")).filter(f => f.startsWith("vite"));
+  console.log("  root .bin vite*:", bins);
+} catch {}
 
-// 3. Bundle API with esbuild (from root node_modules)
+// 2. Bundle API
 console.log("[build] bundling API...");
 const apiBundleDir = join(root, "dist", "api");
 mkdirSync(apiBundleDir, { recursive: true });
@@ -39,12 +45,11 @@ await build({
 });
 console.log("[build] API bundled ✓");
 
-// 4. Build frontend — use absolute path to vite binary
-const viteBin = join(root, "frontend", "node_modules", ".bin", "vite");
+// 3. Build frontend — vite hoisted to root node_modules with workspaces
 console.log("[build] building frontend...");
 run(`"${viteBin}" build`, join(root, "frontend"));
 
-// 5. Copy frontend/dist → root dist/
+// 4. Copy frontend/dist → root dist/
 console.log("[build] copying frontend → dist/...");
 const frontendDist = join(root, "frontend", "dist");
 if (existsSync(frontendDist)) {

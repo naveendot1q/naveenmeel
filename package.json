@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "frontend",
+    "api"
+  ],
   "devDependencies": {
     "esbuild": "^0.25.4"
   },
