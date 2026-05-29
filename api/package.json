@@ -4,9 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "node build.mjs",
-    "start": "node dist/index.mjs"
+    "dev": "tsx watch src/index.ts"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",
