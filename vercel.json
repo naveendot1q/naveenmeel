@@ -1,4 +1,5 @@
 {
+  "installCommand": "pnpm install --no-frozen-lockfile",
   "buildCommand": "node scripts/vercel-build.mjs",
   "outputDirectory": "dist",
   "framework": null,
