@@ -7,8 +7,8 @@
     "frontend",
     "api"
   ],
-  "devDependencies": {
-    "esbuild": "^0.25.4"
+  "dependencies": {
+    "esbuild": "0.25.4"
   },
   "scripts": {
     "build": "node vercel-build.mjs"

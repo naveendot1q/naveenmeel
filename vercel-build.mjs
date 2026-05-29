@@ -1,7 +1,6 @@
 import { execSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readdirSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { build } from "esbuild";
 
 const root = process.cwd();
 const run = (cmd, cwd) => {
@@ -11,43 +10,41 @@ const run = (cmd, cwd) => {
 
 console.log("[build] root:", root);
 
-// 1. Single npm install at root installs all workspaces (frontend + api)
-console.log("[build] npm install (all workspaces)...");
+// 1. Install all workspace deps (esbuild platform binary included as dependency)
+console.log("[build] npm install...");
 run("npm install", root);
 
-// Debug: confirm vite exists
-const viteBin = join(root, "node_modules", ".bin", "vite");
-const frontendVite = join(root, "frontend", "node_modules", ".bin", "vite");
-console.log("[build] checking bins...");
-console.log("  root vite:", existsSync(viteBin) ? "✓" : "✗");
-console.log("  frontend vite:", existsSync(frontendVite) ? "✓" : "✗");
-try {
-  const bins = readdirSync(join(root, "node_modules", ".bin")).filter(f => f.startsWith("vite"));
-  console.log("  root .bin vite*:", bins);
-} catch {}
-
-// 2. Bundle API
+// 2. Bundle API using esbuild JS API
+//    Import AFTER npm install so the platform binary is present
 console.log("[build] bundling API...");
 const apiBundleDir = join(root, "dist", "api");
 mkdirSync(apiBundleDir, { recursive: true });
 
-await build({
-  entryPoints: [join(root, "api", "src", "vercel.ts")],
+// Spawn a small node script to do the esbuild call — avoids ESM/CJS interop issues
+const builderScript = join(root, "api-bundle.cjs");
+writeFileSync(builderScript, `
+const esbuild = require('esbuild');
+const path = require('path');
+const root = ${JSON.stringify(root)};
+esbuild.build({
+  entryPoints: [path.join(root, 'api', 'src', 'vercel.ts')],
   bundle: true,
-  platform: "node",
-  target: "node20",
-  format: "esm",
-  outfile: join(apiBundleDir, "index.mjs"),
-  external: ["pg-native"],
-  banner: {
-    js: "import { createRequire as _cr } from 'module'; const require = _cr(import.meta.url);",
-  },
-});
-console.log("[build] API bundled ✓");
+  platform: 'node',
+  target: 'node20',
+  format: 'esm',
+  outfile: path.join(root, 'dist', 'api', 'index.mjs'),
+  external: ['pg-native'],
+  banner: { js: "import{createRequire as R}from'module';const require=R(import.meta.url);" },
+}).then(() => {
+  console.log('API bundle done');
+}).catch(e => { console.error(e); process.exit(1); });
+`);
+run(`node ${builderScript}`, root);
+rmSync(builderScript);
 
-// 3. Build frontend — vite hoisted to root node_modules with workspaces
+// 3. Build frontend
 console.log("[build] building frontend...");
-run(`"${viteBin}" build`, join(root, "frontend"));
+run("node_modules/.bin/vite build", join(root, "frontend"));
 
 // 4. Copy frontend/dist → root dist/
 console.log("[build] copying frontend → dist/...");
